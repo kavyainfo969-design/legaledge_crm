@@ -1,0 +1,44 @@
+# Render manifest for LegalEdge CRM (Option A: separate frontend + backend + managed DB)
+# Replace placeholders before importing into Render or committing.
+
+services:
+  - type: web_service
+    name: legaledge-backend
+    env: python
+    repo: https://github.com/kavyainfo969-design/legaledge_crm
+    branch: main
+    root: legaledge_backend
+    plan: starter
+    buildCommand: |
+      pip install -r requirements.txt; 
+      python manage.py migrate --noinput; 
+      python manage.py collectstatic --noinput
+    startCommand: gunicorn config.wsgi:application --chdir legaledge_backend --bind 0.0.0.0:$PORT --workers 3
+    envVars:
+      - key: DJANGO_DEBUG
+        value: 'false'
+      - key: SECRET_KEY
+        value: 'REPLACE_WITH_SECURE_VALUE' # set this as a Render secret in the dashboard and update here or via UI
+      - key: ALLOWED_HOSTS
+        value: 'localhost,127.0.0.1' # expand to your render service domain(s)
+      - key: STATIC_ROOT
+        value: '/opt/render/project/src/legaledge_backend/staticfiles'
+      - key: DATABASE_URL
+        fromDatabase: legaledge-db
+
+staticSites:
+  - name: legaledge-frontend
+    repo: https://github.com/kavyainfo969-design/legaledge_crm
+    branch: main
+    root: .
+    plan: free
+    buildCommand: npm ci && npm run build
+    publishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: 'https://legaledge-crm-backend.onrender.com/api'
+
+databases:
+  - name: legaledge-db
+    engine: postgresql
+    plan: starter

@@ -14,6 +14,12 @@ export default defineConfig({
       },
     },
   },
+  // Allow Vite preview to accept requests routed to the Render host
+  preview: {
+    // whitelist Render backend hostname so preview binds correctly when Render
+    // routes traffic through the platform
+    allowedHosts: ['legaledge-crm-backend.onrender.com'],
+  },
   test: {
     environment: 'jsdom',
     globals: true,

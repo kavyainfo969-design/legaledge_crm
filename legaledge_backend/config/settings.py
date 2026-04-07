@@ -63,7 +63,7 @@ DEBUG = env_bool('DJANGO_DEBUG', default=False)
 
 CRM_ALLOW_ANY = DEBUG and env_bool('CRM_ALLOW_ANY', default=False)
 
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0')
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default="*")
 
 
 # 📦 Apps

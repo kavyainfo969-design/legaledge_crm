@@ -3,16 +3,25 @@
 
 services:
   - type: web_service
-    name: legaledge-backend
+    name: legaledge-app
     env: python
     repo: https://github.com/kavyainfo969-design/legaledge_crm
     branch: main
-    root: legaledge_backend
+    root: .
     plan: starter
+    # Build both frontend and backend, copy frontend build into Django staticfiles,
+    # run migrations and collectstatic so the single web service serves the app.
     buildCommand: |
-      pip install -r requirements.txt; 
-      python manage.py migrate --noinput; 
-      python manage.py collectstatic --noinput
+      # Frontend build
+      npm ci && npm run build;
+      # Install Python deps and run Django tasks
+      pip install -r legaledge_backend/requirements.txt;
+      # Copy built frontend into backend static root
+      mkdir -p legaledge_backend/staticfiles;
+      cp -r dist/* legaledge_backend/staticfiles/ || true;
+      cd legaledge_backend;
+      python manage.py migrate --noinput;
+      python manage.py collectstatic --noinput;
     startCommand: gunicorn config.wsgi:application --chdir legaledge_backend --bind 0.0.0.0:$PORT --workers 3
     envVars:
       - key: DJANGO_DEBUG
@@ -20,23 +29,11 @@ services:
       - key: SECRET_KEY
         value: 'REPLACE_WITH_SECURE_VALUE' # set this as a Render secret in the dashboard and update here or via UI
       - key: ALLOWED_HOSTS
-        value: 'localhost,127.0.0.1' # expand to your render service domain(s)
+        value: 'localhost,127.0.0.1,0.0.0.0,legaledge-crm-backend.onrender.com'
       - key: STATIC_ROOT
         value: '/opt/render/project/src/legaledge_backend/staticfiles'
       - key: DATABASE_URL
         fromDatabase: legaledge-db
-
-staticSites:
-  - name: legaledge-frontend
-    repo: https://github.com/kavyainfo969-design/legaledge_crm
-    branch: main
-    root: .
-    plan: free
-    buildCommand: npm ci && npm run build
-    publishPath: dist
-    envVars:
-      - key: VITE_API_URL
-        value: 'https://legaledge-crm-backend.onrender.com/api'
 
 databases:
   - name: legaledge-db

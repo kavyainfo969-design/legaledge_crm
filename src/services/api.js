@@ -227,6 +227,28 @@ async function apiFetch(path, options = {}) {
 
   // 204 No Content
   if (response.status === 204) return null;
+  // Some endpoints may return an empty body or HTML (e.g., server error pages).
+  // Guard against calling response.json() on an empty or non-JSON response.
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+  if (!contentType.includes('application/json')) {
+    // Try to read text. If empty, return null. If HTML, surface a helpful error.
+    const rawText = await response.text().catch(() => '');
+    if (!rawText) return null;
+    if (looksLikeHtmlDocument(rawText)) {
+      // Provide a readable error for HTML debug pages
+      const errMsg = summarizeHtmlError(rawText, response, 'Unexpected server response');
+      const err = new Error(errMsg);
+      err.status = response.status;
+      throw err;
+    }
+    // Try to parse text as JSON, fallback to returning raw text
+    try {
+      return JSON.parse(rawText);
+    } catch {
+      return rawText;
+    }
+  }
+
   return response.json();
 }
 
